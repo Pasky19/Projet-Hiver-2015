@@ -1,0 +1,149 @@
+using UnityEngine;
+using System.Collections;
+
+public class MapGenerator{
+
+	internal Tuile[,] map;
+	private int size;
+	public int heightRange = 10;
+	public int mountainPercentage = 1;
+
+	private GameObject gazon;
+	//private GameObject player;
+
+	public MapGenerator(GameObject _gazon, GameObject _player, int pSize){
+		gazon = _gazon;
+		//player = _player;
+		size = pSize;
+	}
+
+	// Use this for initialization
+	internal void Start (){
+
+		// Créer le terrain plat de base
+		map = new Tuile[size,size];
+		
+		for (int x = 0; x < size; x++)
+		{
+			for (int z = 0; z < size; z++)
+			{
+				map[x,z] = new Tuile(gazon, new Vector3(x, 0, z), true, x, z);
+			}
+		}
+
+		for (int x = 0; x < size; x++)
+		{
+			for (int z = 0; z < size; z++) 
+			{
+				if(map[x,z].GetX() > 0)
+				{
+					map[x,z].setLeft(map[x - 1, z]);
+				}
+				if(map[x,z].GetX() < size - 1)
+				{
+					map[x,z].setRight(map[x + 1, z]);
+				}
+				if(map[x,z].GetZ() > 0)
+				{
+					map[x,z].setBottom(map[x, z - 1]);
+				}
+				if (map[x,z].GetZ() < size - 1)
+				{
+					map[x,z].setTop(map[x, z + 1]);
+				}
+			}
+		}
+
+		placeMountains ();
+		
+		//GameObject.Instantiate (player, new Vector3 (5, 2, 5), player.transform.rotation);
+	}
+	
+	// Update is called once per frame
+	internal void Update () 
+	{
+		Master.map = map;
+	}
+
+	// Place un bloc a une hauteur random et remplit sous ce bloc
+	private void createElevation(int x, int y, int z)
+	{
+		map [x, z].Translate (y);
+		map [x, z].setModified (true);
+		map [x, z].walkable = false;
+
+		for (int i = 0; i < y; i++)
+		{
+			GameObject.Instantiate(gazon, new Vector3(x, i, z), Quaternion.identity);
+		}
+	}
+
+	private void createElevationRecursive(int x, int y, int z, Tuile cube)
+	{
+		if(y >= 0)
+		{
+			cube.Translate (y);
+			cube.setModified (true);
+			cube.walkable = false;
+
+			for (int i = 0; i < y; i++)
+			{
+				GameObject.Instantiate(gazon, new Vector3(x, i, z), Quaternion.identity);
+			}
+
+			if(cube.GetY() >= 1)
+			{
+				if(cube.getLeft() != null)
+				{
+					createElevationRecursive(cube.getLeft().GetX(), Random.Range(y - 3, y), cube.getLeft().GetZ(), cube.getLeft());
+				}
+				if(cube.getRight() != null)
+				{
+					createElevationRecursive(cube.getRight().GetX(), Random.Range(y - 3, y), cube.getRight().GetZ(), cube.getRight());
+				}
+				if(cube.getTop() != null)
+				{
+					createElevationRecursive(cube.getTop().GetX(), Random.Range(y - 3, y), cube.getTop().GetZ(), cube.getTop());
+				}
+				if(cube.getBottom() != null)
+				{
+					createElevationRecursive(cube.getBottom().GetX(), Random.Range(y - 3, y), cube.getBottom().GetZ(), cube.getBottom());
+				}
+			}
+		}
+	}
+
+	// Calcul le pourcentage de montagne a placer et les crer
+	private void placeMountains()
+	{
+		int mapSize = size * size;
+		int nb = mapSize / 100 * mountainPercentage / 2;
+
+		for (int i = 0; i < nb; i++) 
+		{
+			int x = Random.Range (1, size);
+			int y = Random.Range (1, heightRange);
+			int z = Random.Range (1, size);
+			Tuile cube = map[x,z];
+
+			createElevation (x, y, z);
+
+			if(cube.getLeft() != null)
+			{
+				createElevationRecursive(cube.getLeft().GetX(), Random.Range(y - 3, y), cube.getLeft().GetZ(), cube.getLeft());
+			}
+			if(cube.getRight() != null)
+			{
+				createElevationRecursive(cube.getRight().GetX(), Random.Range(y - 3, y), cube.getRight().GetZ(), cube.getRight());
+			}
+			if(cube.getTop() != null)
+			{
+				createElevationRecursive(cube.getTop().GetX(), Random.Range(y - 3, y), cube.getTop().GetZ(), cube.getTop());
+			}
+			if(cube.getBottom() != null)
+			{
+				createElevationRecursive(cube.getBottom().GetX(), Random.Range(y - 3, y), cube.getBottom().GetZ(), cube.getBottom());
+			}
+		}
+	}
+}
